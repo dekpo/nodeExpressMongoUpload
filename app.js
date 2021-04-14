@@ -2,17 +2,56 @@
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
+const mongoose = require('mongoose');
+
+// on se connecte au serveur MongoDB
+const mongoURI = 'mongodb+srv://dekpo:qi08xn6@cluster0.wnduh.mongodb.net/GALLERY_DB?retryWrites=true&w=majority';
+mongoose.connect(mongoURI, {useNewUrlParser: true, useUnifiedTopology: true }, () => {
+    console.log('MongoDB connected successfully !!!');
+});
+// on crée un schéma pour les images
+const ImageSchema = new mongoose.Schema({
+    filename: {
+        type: String,
+        required: 'the filename is mandatory !'
+    },
+    title: String,
+    description: String,
+    author: String,
+    upload_date: {
+        type: Date,
+        default: Date.now
+    }
+});
+// on définit un model et une méthode pour ajouter une image
+// dans la BDD MongoDB GALLERY_DB
+const ImageModel = mongoose.model('Image',ImageSchema);
+const addNewImage = (req,res) => {
+    const imageData = {
+        filename: req.file.filename,
+        title: req.body.title,
+        description: '',
+        author: ''
+    };
+    const newImage = new ImageModel( imageData );
+    newImage.save( (error,data) => {
+        if (error) res.send(error);
+        res.json(data);
+        console.log('Method addNewImage :', data);
+    });
+}
+
+// on définit quelques constantes
+const UPLOAD_DIR = 'public';
+const PORT = 3000;
+const message = 'Server is running on port '+PORT;
 
 // on lance le serveur avec sa config
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
-
-// on définit quelques constantes
-const UPLOAD_DIR = 'public';
-const PORT = 3000;
-const message = 'Server is running on port '+PORT;
+app.use(express.static(UPLOAD_DIR));
 
 // on gère l'upload dans le dossier voulu avec un renommage
 const storage = multer.diskStorage({
@@ -26,14 +65,11 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// on définit notre route
-app.post('/', upload.single('picture'), (req,res) => {
-    console.log(req.file);
-    console.log(req.body);
-    // res.send(message);
-});
+// on définit notre route pour l'upload en méthode post
+app.post('/', upload.single('picture'), addNewImage );
 app.get('/', (req,res) => {
     res.send(message);
+    console.log( req.headers.host );
 });
 // le serveur express écoute le port 3000
 app.listen(PORT, () => {
