@@ -18,6 +18,7 @@ const ImageSchema = new mongoose.Schema({
     title: String,
     description: String,
     author: String,
+    likes: Number,
     upload_date: {
         type: Date,
         default: Date.now
@@ -30,8 +31,8 @@ const addNewImage = (req,res) => {
     const imageData = {
         filename: req.file.filename,
         title: req.body.title,
-        description: '',
-        author: ''
+        description: req.body.description,
+        author: req.body.author
     };
     const newImage = new ImageModel( imageData );
     newImage.save( (error,data) => {
@@ -39,6 +40,14 @@ const addNewImage = (req,res) => {
         res.json(data);
         console.log('Method addNewImage :', data);
     });
+}
+// la méthode pour afficher le listing de photos
+const getImages = (req,res) => {
+    ImageModel.find({},(err,data) => {
+        if (err) res.send(err);
+        res.json(data);
+        console.log('Method getImages :', data);
+    }).sort({'upload_date':-1});
 }
 
 // on définit quelques constantes
@@ -67,6 +76,9 @@ const upload = multer({ storage: storage });
 
 // on définit notre route pour l'upload en méthode post
 app.post('/', upload.single('picture'), addNewImage );
+// la route pour afficher la liste au format Json
+app.get('/list', getImages );
+// la route pour l'accès par défaut
 app.get('/', (req,res) => {
     res.send(message);
     console.log( req.headers.host );
